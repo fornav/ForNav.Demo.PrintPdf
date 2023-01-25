@@ -1,0 +1,16 @@
+{
+    "name": "ForNAV Rules",
+    "description": "New rules",
+    "rules": [
+        {
+            "id": "AS0051",
+            "action": "Hidden",
+            "justification": "Not important"
+        },
+        {
+            "id": "AS0084",
+            "action": "Hidden",
+            "justification": "Not important"
+        }
+    ]
+}
