@@ -8,12 +8,12 @@ page 50100 "Print PDF"
     {
         area(Processing)
         {
-            action(PrintPdf)
+            action(PrintPdfFromBase64)
             {
                 ApplicationArea = All;
-                Caption = 'Print PDF';
+                Caption = 'Print PDF from BASE64';
                 Image = Print;
-                ToolTip = 'Create a print job on the direct print queue';
+                ToolTip = 'Create a print job on the direct print queue. PDF stored in BASE64 string.';
 
                 trigger OnAction()
                 var
@@ -32,6 +32,72 @@ page 50100 "Print PDF"
 
                     // Create a print job on the print queue
                     DirPrtQueue.Create('DHL Express', 'Label Printer', pdfInStream, DirPrtQueue.ContentType::PDF);
+                end;
+            }
+            action(PrintPdfFromBlob)
+            {
+                ApplicationArea = All;
+                Caption = 'Print PDF from BLOB';
+                Image = Print;
+                ToolTip = 'Create a print job on the direct print queue. PDF stored in a BLOB.';
+
+                trigger OnAction()
+                var
+                    DirPrtQueue: Record "ForNAV DirPrt Queue";
+                    FileStorage: Record "ForNAV File Storage";
+                    pdfInStream: InStream;
+                begin
+                    // Get PDF from File Storage table
+                    if not FileStorage.Get('FORNAV.DEMO.PRINTPDF', 'PDF') then
+                        Error('Insert a PDF in the File Storage with code FORNAV.DEMO.PRINTPDF and type PDF first.');
+                    FileStorage.CalcFields(FileStorage.Data);
+
+                    // Check if there is data in the file storage record
+                    if not FileStorage.Data.HasValue then
+                        Error('There is not data in the file storage record.');
+
+                    // Create an InStream with the PDF
+                    FileStorage.Data.CreateInStream(pdfInStream);
+
+                    // Create a print job on the print queue
+                    DirPrtQueue.Create('BLOB from ForNAV File Storage', 'Label Printer', pdfInStream, DirPrtQueue.ContentType::PDF);
+                end;
+            }
+            action(PrintCopies)
+            {
+                ApplicationArea = All;
+                Caption = 'Print PDF with 2 copies';
+                Image = Print;
+                ToolTip = 'Create a print job with copies set to 2 on the direct print queue. PDF stored in BASE64 string.';
+
+                trigger OnAction()
+                var
+                    DirPrtQueue: Record "ForNAV DirPrt Queue";
+                    LocalPrinter: Record "ForNAV Local Printer";
+                    Base64Convert: Codeunit "Base64 Convert";
+                    TempBlob: Codeunit "Temp Blob";
+                    pdfInStream: InStream;
+                    pdfOutStream: OutStream;
+                    directPrinterName: Text;
+                    printerSettings: Text;
+                    printerSettingsObj: JsonObject;
+                begin
+                    // Get printer settings
+                    directPrinterName := 'Office';
+                    LocalPrinter.Get(directPrinterName);
+                    printerSettingsObj := LocalPrinter.PrinterSetting();
+                    printerSettingsObj.Replace('Copies', 2);
+                    printerSettingsObj.WriteTo(printerSettings);
+
+                    // Get PDF stored base64 string
+                    TempBlob.CreateOutStream(pdfOutStream);
+                    Base64Convert.FromBase64(GetSamplePdfBase64(), pdfOutStream);
+
+                    // Create an InStream with the PDF
+                    TempBlob.CreateInStream(pdfInStream);
+
+                    // Create a print job on the print queue
+                    DirPrtQueue.Create(0, LocalPrinter."Cloud Printer Name", LocalPrinter."Local Printer Name", pdfInStream, printerSettings, 'Test with copies', DirPrtQueue.ContentType::PDF);
                 end;
             }
         }
