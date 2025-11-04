@@ -1,4 +1,4 @@
-page 50100 "Print PDF"
+page 50150 "Print PDF"
 {
     PageType = Card;
     ApplicationArea = All;
@@ -19,10 +19,17 @@ page 50100 "Print PDF"
                 var
                     DirPrtQueue: Record "ForNAV DirPrt Queue";
                     Base64Convert: Codeunit "Base64 Convert";
+                    DemoUtils: Codeunit "Demo Utils";
                     TempBlob: Codeunit "Temp Blob";
                     pdfInStream: InStream;
                     pdfOutStream: OutStream;
+                    directPrinterName: Text[250];
                 begin
+                    directPrinterName := 'Label Printer';
+
+                    // Check local printer exists
+                    DemoUtils.ValidateDirectPrinter(directPrinterName, 'Canon Generic Plus PCL6');
+
                     // Get PDF stored base64 string
                     TempBlob.CreateOutStream(pdfOutStream);
                     Base64Convert.FromBase64(GetSamplePdfBase64(), pdfOutStream);
@@ -31,7 +38,9 @@ page 50100 "Print PDF"
                     TempBlob.CreateInStream(pdfInStream);
 
                     // Create a print job on the print queue
-                    DirPrtQueue.Create('DHL Express', 'Label Printer', pdfInStream, DirPrtQueue.ContentType::PDF);
+                    DirPrtQueue.Create('DHL Express', directPrinterName, pdfInStream, DirPrtQueue.ContentType::PDF);
+
+                    Message('Print job created on direct print queue.');
                 end;
             }
             action(PrintPdfFromBlob)
@@ -45,10 +54,26 @@ page 50100 "Print PDF"
                 var
                     DirPrtQueue: Record "ForNAV DirPrt Queue";
                     FileStorage: Record "ForNAV File Storage";
+                    DemoUtils: Codeunit "Demo Utils";
                     pdfInStream: InStream;
+                    directPrinterName: Text[250];
+                    storageId: Code[20];
                 begin
+                    directPrinterName := 'Label Printer';
+                    storageId := 'FORNAV.DEMO.PRINTPDF';
+
+                    // Check local printer exists
+                    DemoUtils.ValidateDirectPrinter(directPrinterName, 'Canon Generic Plus PCL6');
+
+                    // if not FileStorage.Get('', 'PDF') then begin
+                    //     FileStorage.Init();
+                    //     FileStorage.Data.CreateInStream(dataInStr);
+                    //     FileStorage.Code := storageId;
+                    //     FileStorage.Insert();
+                    // end;
+
                     // Get PDF from File Storage table
-                    if not FileStorage.Get('FORNAV.DEMO.PRINTPDF', 'PDF') then
+                    if not FileStorage.Get(storageId, 'PDF') then
                         Error('Insert a PDF in the File Storage with code FORNAV.DEMO.PRINTPDF and type PDF first.');
                     FileStorage.CalcFields(FileStorage.Data);
 
@@ -61,8 +86,11 @@ page 50100 "Print PDF"
 
                     // Create a print job on the print queue
                     DirPrtQueue.Create('BLOB from ForNAV File Storage', 'Label Printer', pdfInStream, DirPrtQueue.ContentType::PDF);
+
+                    Message('Print job created on direct print queue.');
                 end;
             }
+
             action(PrintCopies)
             {
                 ApplicationArea = All;
@@ -76,6 +104,7 @@ page 50100 "Print PDF"
                     LocalPrinter: Record "ForNAV Local Printer";
                     Base64Convert: Codeunit "Base64 Convert";
                     TempBlob: Codeunit "Temp Blob";
+                    DemoUtils: Codeunit "Demo Utils";
                     pdfInStream: InStream;
                     pdfOutStream: OutStream;
                     directPrinterName: Text;
@@ -84,6 +113,7 @@ page 50100 "Print PDF"
                 begin
                     // Get printer settings
                     directPrinterName := 'Office';
+                    DemoUtils.ValidateDirectPrinter(directPrinterName, 'Bullzip PDF Printer');
                     LocalPrinter.Get(directPrinterName);
                     printerSettingsObj := LocalPrinter.PrinterSetting();
                     printerSettingsObj.Replace('Copies', 2);
@@ -98,6 +128,8 @@ page 50100 "Print PDF"
 
                     // Create a print job on the print queue
                     DirPrtQueue.Create(0, LocalPrinter."Cloud Printer Name", LocalPrinter."Local Printer Name", pdfInStream, printerSettings, 'Test with copies', DirPrtQueue.ContentType::PDF);
+
+                    Message('Print job created on direct print queue.');
                 end;
             }
         }
